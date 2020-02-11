@@ -1,0 +1,4 @@
+output*
+debug/
+release/
+.vs/
