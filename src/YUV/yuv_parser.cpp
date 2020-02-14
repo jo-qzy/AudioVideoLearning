@@ -123,11 +123,11 @@ bool YuvParser::yuv420_graybar(int width, int height, int y_min, int y_max, int 
 {
     FILE *output_graybar = fopen("output_420_graybar.yuv", "wb+");
 
-    unsigned char *picture = new unsigned char[width * height * 3 / 2];
-    
     if (bar_num == 1 && y_max != y_min) {
         return false;
     }
+
+    unsigned char *picture = new unsigned char[width * height * 3 / 2];
 
     float luma_range = (float)(y_max - y_min) / (float)(bar_num > 1 ? bar_num - 1 : bar_num);
     unsigned char cur_luma = y_min;

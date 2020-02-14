@@ -1,5 +1,7 @@
 # YUV
 
+笔记整理于网上其他人的博客和维基百科，以及[雷霄骅先生的博客](https://blog.csdn.net/leixiaohua1020/article/details/50534150)。
+
 ## 基本概念
 
 YUV最初提出是为了解决彩色电视和黑白电视的兼容问题，YUV分别为亮度信息（Y）与色彩信息（UV）。YUV比RGB的优势在于不要求三个独立视频信号同时传输，所以占用带宽（频宽）更少。历史原因，YUV和Y'UV通常用来编码电视的模拟信号，而YCbCr则是用来描述数字的影像信号，适合影片与图片压缩以及传输，有时候看到有用Cb和Cr的方式来表示，其实等同于U和V，但应该严格区分YUV和YCbCr这两个专有名词有时并非完全相同，今天大家所讲的YUV其实就是指YCbCr。
@@ -63,19 +65,25 @@ $$
 
    相邻的两个Y共用其相邻的两个Cb、Cr，例如对于Y'00和Y'01而言，其Cb、Cr的均值为Cb00、Cr00，其他像素点以此类推。
 
-   ![YUYV(YUV422)](./pic/YUV/YUYV(YUV422).png)
+   <center>
+   	<img src="./pic/YUV/YUYV(YUV422).png" width="600">
+   </center>
 
 2. UYVY（属于YUV422）
 
    相邻的两个Y共用其相邻的两个Cb、Cr，只不过和上面的YUYV不同的是Cb和Cr的顺序不同，其他像素点以此类推。
 
-   ![UYVY(YUV422)](./pic/YUV/UYVY(YUV422).png)
+   <center>
+   	<img src="./pic/YUV/UYVY(YUV422).png" width="600">
+   </center>
 
 3. YUV422P
 
    YUV422P的P表示Planar formats（平面格式），也就是说YUV不是交错存储而是先存Y，再存U和V，对于Y'00和Y'01而言，其Cb、Cr的均值为Cb00、Cr00。
 
-   a
+   <center>
+   	<img src="./pic/YUV/YUV422P.png" width="600">
+   </center>
 
 4. YV12（属于YUV420）
 
@@ -85,7 +93,9 @@ $$
 
    YU12则和YV12除存储方式略有不同外，其他类似，存储方式是先存储Y，再存储U，再存储V。
 
-   ![YV12(YUV420)](./pic/YUV/YV12(YUV420).png)
+   <center>
+   	<img src="./pic/YUV/YV12(YUV420).png" width="600">
+   </center>
 
 5. NV12（YUV420）
 
@@ -93,7 +103,9 @@ $$
 
    NV21和NV12略有不同，先存储Y，再交叉存储V和U。
 
-   ![NV12(YUV420)](./pic/YUV/NV12(YUV420).png)
+   <center>
+   	<img src="./pic/YUV/NV12(YUV420).png" width="600">
+   </center>
 
 ## yuvplayer查看YUV图像
 
@@ -155,15 +167,26 @@ bool YuvParser::yuv420_split(const std::string input_url, int width, int height,
 
 解析出来的图像需要用`yuvplayer`查看，原始图片为512*512，如下图：
 
-![lena_original](./pic/YUV/lena_original.png)
+<center>
+	<img src="./pic/YUV/lena_original.png" width="300">
+    <center>lena_original.yuv</center>
+</center>
+
 
 解析后图片分为3个分量，Y、U、V，使用yuvplayer，在Color选项卡中选中分量Y，首先查看Y分量，尺寸为512*512。
 
-![output_420_y](./pic/YUV/output_420_y.png)
+<center>
+<img src="./pic/YUV/output_420_y.png" width="300">
+<center>output_420_y.y</center>
+
 
 U、V如下图，尺寸为256*256。
 
-![output_420_u](./pic/YUV/output_420_u.png)![output_420_v](./pic/YUV/output_420_v.png)
+<center>
+	<img src="./pic/YUV/output_420_u.png" width="150"><img src="./pic/YUV/output_420_v.png" width="150">
+    <center>output_420_u.y output_420_v.y</center>
+</center>
+
 
 ### 2. 分离YUV444P像素数据中的Y、U、V分量
 
@@ -198,17 +221,20 @@ bool YuvParser::yuv444_split(const std::string input_url, int width, int height,
 
 原图依旧是lena标准图，用ffmpeg转换为YUV444P，分离后效果如下
 
-output444_y.y
+<center>
+	<img src="./pic/YUV/output_444_y.png" width="300">
+	<center>output_444_y.y</center>
+</center>
 
-![output_444_y](./pic/YUV/output_444_y.png)
+<center>
+	<img src="./pic/YUV/output_444_u.png" width="300">
+	<center>output_444_u.y</center>
+</center>
 
-output444_u.y
-
-![output_444_u](./pic/YUV/output_444_u.png)
-
-output444_v.y
-
-![output_444_v](./pic/YUV/output_444_v.png)
+<center>
+	<img src="./pic/YUV/output_444_v.png" width="300">
+	<center>output_444_v.y</center>
+</center>
 
 ### 3. 将YUV420P像素数据去掉颜色（灰度图）
 
@@ -237,7 +263,10 @@ bool YuvParser::yuv420_gray(const std::string input_url, int width, int height, 
 
 处理结果如下：
 
-![output_420_gray](./pic/YUV/output_420_gray.png)
+<center>
+	<img src="./pic/YUV/output_420_gray.png" width="300">
+	<center>output_444_gray.yuv</center>
+</center>
 
 ### 4. 将YUV420P像素数据的亮度减半
 
@@ -269,7 +298,10 @@ bool YuvParser::yuv420_half_bright(const std::string input_url, int width, int h
 
 亮度减半效果如下
 
-![output_420_half_bright](./pic/YUV/output_420_half_bright.png)
+<center>
+	<img src="./pic/YUV/output_420_half_bright.png" width="300">
+	<center>output_444_half_bright.yuv</center>
+</center>
 
 ### 5. 将YUV420P像素数据周围加上边框
 
@@ -305,7 +337,10 @@ bool YuvParser::yuv420_border(const std::string input_url, int width, int height
 
 20像素的边框效果图如下
 
-![output_420_border](./pic/YUV/output_420_border.png)
+<center>
+	<img src="./pic/YUV/output_420_border.png" width="300">
+	<center>output_444_gray.yuv</center>
+</center>
 
 ### 6. 生成YUV420P格式的灰阶测试图
 
@@ -364,7 +399,10 @@ bool YuvParser::yuv420_graybar(int width, int height, int y_min, int y_max, int 
 
 简单学雷神测试下10阶灰阶测试图，宽1024像素，高512，效果如下图。
 
-![output_420_graybar](./pic/YUV/output_420_graybar.png)
+<center>
+	<img src="./pic/YUV/output_420_graybar.png" width="600">
+	<center>output_444_graybar.yuv</center>
+</center>
 
 各个灰度条Y、U、V值如下
 
@@ -431,7 +469,10 @@ bool YuvParser::yuv420_psnr(const std::string input_url1, const std::string inpu
 
 结果如下，为26.693：
 
-![output_420_psnr](./pic/YUV/output_420_psnr.png)
+<center>
+	<img src="./pic/YUV/output_420_psnr.png" width="600">
+	<center>output_444_psnr</center>
+</center>
 
 ## 未完待续
 
@@ -440,6 +481,7 @@ YUV整理弄了两天，代码跟着都敲了一遍，感觉现在格式已经�
 1. 为什么U、V分量的无色是128？
 2. 如果像素不是4的倍数，那么YUV是怎么存储的？
 3. YUV4:2:0这些数字的解释是啥，虽然上面有总结到，但是还是一知半解？
+4. RGB24分离R、G、B后，原图`500*500`为什么分离后为`256*256`?
 
 后面还要做的：
 
