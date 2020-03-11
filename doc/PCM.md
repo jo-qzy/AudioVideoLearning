@@ -2,6 +2,19 @@
 
 [影响PCM质量的来源](#影响PCM质量的来源)
 
+[无损音乐](#无损音乐)
+
+[PCM格式](#PCM格式)
+
+[PCM PARSER](#PCM PARSER)
+
+- [1. 分离PCM16BE双声道音频采样数据的左声道和右声道](#1. 分离PCM16BE双声道音频采样数据的左声道和右声道)
+- [2. 将PCM16BE双声道音频采样数据中左声道音量降低一半](#2. 将PCM16BE双声道音频采样数据中左声道音量降低一半)
+- [3. 将PCM16BE双声道音频采样数据的声音速度提高一倍](#3. 将PCM16BE双声道音频采样数据的声音速度提高一倍)
+- [4. 将PCM16BE双声道音频采样数据转换为PCM8音频采样数据](#4. 将PCM16BE双声道音频采样数据转换为PCM8音频采样数据)
+- [5. 将PCM16BE音频数据截取一段](#5. 将PCM16BE音频数据截取一段)
+- [6. 将PCM16BE双声道音频数据转化为WAVE格式音频数据](#6. 将PCM16BE双声道音频数据转化为WAVE格式音频数据)
+
 # PCM
 
 整理自[Wikipedia](https://zh.wikipedia.org/wiki/%E8%84%88%E8%A1%9D%E7%B7%A8%E7%A2%BC%E8%AA%BF%E8%AE%8A)和网上的博客，以及[雷霄骅先生的博客](https://blog.csdn.net/leixiaohua1020/article/details/50534316)
@@ -99,20 +112,323 @@ mp3的压缩原理是通过丢弃那些人耳不敏感的PCM数据进行压缩�
 
 ## PCM格式
 
-PCM格式如下图所示，可以看到双声道的数据都是先存左声道，再存右声道，每个声道的数据长度和量化位数有关。
+PCM格式如下图所示，可以看到双声道的数据都是先存左声道，再存右声道，每个声道的数据长度和量化位数有关，下图是表示**小端存储**的PCM数据存储示意图。
 
 <center>
 	<img src="./pic/PCM/pcm_format.png" width="700">
-	<center>PCM FORMAT</center>
+	<center>PCM FORMAT (Little Endian)</center>
 </center>
 
 ## PCM PARSER
 
-### 1. 分离PCM16LE双声道音频采样数据的左声道和右声道
+**注**：开始写代码前，注意一件事，在代码中采用的所有的声音，采样频率都是44100Hz，并且采样格式一律为16BE。16表示一个采样值占`16bit`，BE表示`Big Endian`，表示高字节存储在低地址中。
 
-本程序中的函数可以将PCM16LE双声道数据中左声道和右声道的数据分离成两个文件。
+### 1. 分离PCM16BE双声道音频采样数据的左声道和右声道
+
+本程序中的函数可以将PCM16BE双声道数据中左声道和右声道的数据分离成两个文件。我是用的
 
 ```c++
+bool PcmParser::pcm16_split(const std::string url)
+{
+    FILE *input = fopen(url.c_str(), "rb+");
+    FILE *output_left = fopen("output_left.pcm", "wb+");
+    FILE *output_right = fopen("output_right.pcm", "wb+");
 
+    unsigned char *voice = new unsigned char[4];
+
+    while (!feof(input)) {
+        fread(voice, 1, 4, input);
+        fwrite(voice, 1, 2, output_left);
+        fwrite(voice + 2, 1, 2, output_right);
+    }
+
+    fclose(input);
+    fclose(output_left);
+    fclose(output_right);
+    delete[] voice;
+    return true;
+}
 ```
 
+首先看下原始的音频数据，这里我选用的是我非常喜欢的金莎唱的星月神话，再次重复一下，格式是PCM16BE，采样频率为44100Hz，所以导入数据要选则Audicity菜单栏中的文件->导入->原始数据，选择文件后如下图所示进行导入：
+
+<center>
+	<img src="./pic/PCM/import_audio_data.png" width="600">
+	<center>Import audio to Audacity</center>
+</center>
+
+一个双声道的音频文件会被分离成两个单声道的文件，左声道和右声道的采样值是间隔存储的，每个采样值为2Byte，所以一次读取4个字节，再2Byte去写入两个文件，得到单声道数据，将两个输出文件导入，看下导出后数据载入Audicity的样子。
+
+<center>
+	<img src="./pic/PCM/output_left_and_right.png" width="600">
+	<center>Output left and right</center>
+</center>
+
+可以看到两个文件都只有一个音轨，单独播放下左声道数据试试，发现两个耳机都有声音，这里要区分下单声道并不是只有一个耳机有声音的意思。
+
+百度百科对于单声道的定义是：**一个声音通道**，用一个传声器拾取声音，用一个扬声器进行放音的过程，称之为单声道。单声道是指把**来自不同方位**的音频信号混合后统一由录音器材把它记录下来，再由一只音箱进行重放。
+
+所以单声道并不是只有一边有声音，有可能两边都有声音，当两个声道组成立体声时，用好的耳机听，会明显感觉到层次感，感觉到声音好像在你面前或者某个位置一样。
+
+所以我前面说左声道和右声道数据是不确切的，其实他们都是单声道数据，为了方便称呼，就以左右声道来命名。
+
+Audicity在音源左侧，那里有左右声道平衡的条，如果把条拖动到一侧，才会出现只有单侧耳机有声音的情况，如下图：
+
+<center>
+	<img src="./pic/PCM/single_track.png" width="600">
+	<center>单侧耳机播放</center>
+</center>
+
+### 2. 将PCM16BE双声道音频采样数据中左声道音量降低一半
+
+本程序中的函数可以将PCM16BE左声道的音量降低一半。
+
+雷神教程中采用的是LE的音频数据，我下载到的是BE的音频数据，我没有刻意去使用LE的素材，当然如果需要LE的音频数据，我另写了个BE转换LE的函数`pcm16_be_to_le`在代码文件离里（也可以LE转BE，代码是一样的）。
+
+```c++
+bool PcmParser::pcm16be_half_volume_left(const std::string url)
+{
+    FILE* input = fopen(url.c_str(), "rb+");
+    FILE* output_half_volume_left = fopen("output_half_volume_left.pcm", "wb+");
+
+    unsigned char* voice = new unsigned char[4];
+    // My computer is little endian machine，so it need special handle
+    short* tmp_data = new short;
+    unsigned char* low_byte = reinterpret_cast<unsigned char*>(tmp_data);
+    unsigned char* high_byte = reinterpret_cast<unsigned char*>(tmp_data) + 1;
+
+    while (!feof(input)) {
+        fread(voice, 1, 4, input);
+        *high_byte = voice[0];
+        *low_byte = voice[1];
+        *tmp_data /= 2;
+        fwrite(high_byte, 1, 1, output_half_volume_left);
+        fwrite(low_byte, 1, 1, output_half_volume_left);
+        fwrite(voice + 2, 1, 2, output_half_volume_left);
+    }
+
+    fclose(input);
+    fclose(output_half_volume_left);
+    delete[] voice;
+    return true;
+}
+```
+
+转换之后看下效果，可以看到左声道波形下降了一半：
+
+<center>
+	<img src="./pic/PCM/output_half_volume_left.png" width="600">
+	<center>降低左声道一半声音</center>
+</center>
+
+然后上耳机听，可以感受到，左耳的人声减轻了，会更明显的听到音乐的声音，声音的层次感变弱。
+
+### 3. 将PCM16BE双声道音频采样数据的声音速度提高一倍
+
+通过将双声道中的音频数据丢弃一半，达到提高速度的目的。
+
+```c++
+bool PcmParser::pcm16_double_speed(const std::string url)
+{
+    FILE* input = fopen(url.c_str(), "rb+");
+    FILE* output_double_speed = fopen("output_double_speed.pcm", "wb+");
+
+    int count = 0;
+
+    unsigned char* voice = new unsigned char[4];
+
+    while (!feof(input)) {
+        fread(voice, 1, 4, input);
+        if (0 == count % 2) {
+            fwrite(voice, 1, 2, output_double_speed);
+            fwrite(voice + 2, 1, 2, output_double_speed);
+        }
+        count++;
+    }
+
+    fclose(input);
+    fclose(output_double_speed);
+    delete[] voice;
+    return true;
+}
+```
+
+代码很简单，就是丢弃一半采样数据而已，我这里丢弃了偶数时刻的采样数据，所以音乐时间也少了一半，从原来的23秒多，变成11秒多，听了下，音乐节奏也加快了~
+
+<center>
+	<img src="./pic/PCM/output_double_speed.png" width="600">
+	<center>二倍速音频数据</center>
+</center>
+
+### 4. 将PCM16BE双声道音频采样数据转换为PCM8音频采样数据
+
+将PCM16BE的数据转换为PCM8，PCM8的范围是0-255，只需要将PCM16BE中的每个采样数据的低位丢弃，高位增加128就是PCM8的量化值了~
+
+需要注意的还是大端存储，高字节放在低地址~~~
+
+```c++
+bool PcmParser::pcm16be_to_pcm8(const std::string url)
+{
+    FILE* input = fopen(url.c_str(), "rb+");
+    FILE* output_pcm8 = fopen("output_pcm8.pcm", "wb+");
+
+    unsigned char* voice = new unsigned char[4];
+
+    while (!feof(input)) {
+        fread(voice, 1, 4, input);
+        voice[0] += 128;
+        voice[2] += 128;
+        fwrite(voice, 1, 1, output_pcm8);
+        fwrite(voice + 2, 1, 1, output_pcm8);
+    }
+
+    fclose(input);
+    fclose(output_pcm8);
+    delete[] voice;
+    return true;
+}
+```
+
+感觉听上去。没太大区别啊~
+
+<center>
+	<img src="./pic/PCM/output_pcm8.png" width="600">
+	<center>PCM16BE转换为PCM8</center>
+</center>
+
+### 5. 将PCM16BE音频数据截取一段
+
+```c++
+bool PcmParser::pcm16be_cut(const std::string url, size_t start, size_t end)
+{
+    FILE* input = fopen(url.c_str(), "rb+");
+    FILE* output_cut = fopen("output_cut.pcm", "wb+");
+
+    unsigned char* voice = new unsigned char[4];
+    size_t cur_pos = 0;
+
+    while (!feof(input) && cur_pos <= end) {
+        fread(voice, 1, 4, input);
+        if (cur_pos >= start) {
+            fwrite(voice, 1, 4, output_cut);
+        }
+        cur_pos++;
+    }
+
+    fclose(input);
+    fclose(output_cut);
+    delete[] voice;
+    return true;
+}
+```
+
+原音乐是星月神话的副歌部分，截取到240000刚好是“千年之后你会在哪里~”。
+
+<center>
+	<img src="./pic/PCM/output_cut.png" width="600">
+	<center>裁剪</center>
+</center>
+
+### 6. 将PCM16BE双声道音频数据转化为WAVE格式音频数据
+
+WAVE格式是Windows系统各种的一种音频格式，实质就是在PCM数据前面加了个文件头，来描述音频文件的一些基本信息，如采样率，比特率，长度等。
+
+```c++
+bool PcmParser::pcm16be_to_wave(const std::string url, int channels, int sample_rate)
+{
+    size_t dot_pos = url.rfind('.');
+    std::string output_url(url.begin(), url.begin() + dot_pos);
+    output_url += ".wav";
+    FILE* input = fopen(url.c_str(), "rb+");
+    FILE* output_wave = fopen(output_url.c_str(), "wb+");
+
+    unsigned char* voice = new unsigned char[44];
+    unsigned int pcm_data_size = 0;
+
+    // Simplest WAV file = WAV header + PCM data
+    Wave::WAVE_HEADER wave_header;
+    Wave::WAVE_FMT wave_fmt;
+    Wave::WAVE_DATA wave_data;
+    long header_size = sizeof(wave_header) + sizeof(wave_fmt) + sizeof(wave_data);
+
+    // Write PCM data first
+    fseek(output_wave, header_size, SEEK_CUR);
+    while (!feof(input)) {
+        fread(voice, 1, 2, input);
+        // Save data in Little Endian
+        fwrite(voice + 1, 1, 1, output_wave);
+        fwrite(voice, 1, 1, output_wave);
+        pcm_data_size += 2;
+    }
+
+    // Orgnize WAV header
+    memcpy(wave_header.ChunkID, "RIFF", strlen("RIFF"));
+    wave_header.ChunkSize = header_size + pcm_data_size;
+    memcpy(wave_header.FccType, "WAVE", strlen("WAVE"));
+
+    memcpy(wave_fmt.ChunkID, "fmt ", strlen("fmt "));
+    wave_fmt.ChunkID[4] = ' ';
+    wave_fmt.ChunkSize = sizeof(Wave::WAVE_FMT) - 8;
+    wave_fmt.FormatTag = 1;
+    if (channels == 0 || sample_rate == 0) {
+        wave_fmt.Channels = 2;
+        wave_fmt.SamplePerSec = 44100;
+    } else {
+        wave_fmt.Channels = channels;
+        wave_fmt.SamplePerSec = sample_rate;
+    }
+    wave_fmt.BytesPerSec = wave_fmt.SamplePerSec * 16;
+    wave_fmt.BlockAlign = 4;
+    wave_fmt.BitsPerSample = 16;
+
+    memcpy(wave_data.ChunkID, "data", strlen("data"));
+    wave_data.ChunkSize = pcm_data_size;
+
+    rewind(output_wave);
+    fwrite(&wave_header, sizeof(Wave::WAVE_HEADER), 1, output_wave);
+    fwrite(&wave_fmt, sizeof(Wave::WAVE_FMT), 1, output_wave);
+    fwrite(&wave_data, sizeof(Wave::WAVE_DATA), 1, output_wave);
+
+    fclose(input);
+    fclose(output_wave);
+    delete[] voice;
+    return true;
+}
+```
+
+WAVE格式头由以下三部分组成：
+
+- WAVE_HEADER
+
+  |   字段   |  类型  | 字节数 |              描述               |
+  | :------: | :----: | :----: | :-----------------------------: |
+  |   ckid   |  char  |   4    |        "RIFF" 标志, 大写        |
+  |  cksize  | uint32 |   4    | 文件长度。三个部分长度+数据长度 |
+  | fcc type |  char  |   4    |     "WAVE" 类型块标识, 大写     |
+
+- WAVE_FMT
+
+  |     字段      |  类型  | 字节数 |                          描述                           |
+  | :-----------: | :----: | :----: | :-----------------------------------------------------: |
+  |     ckid      |  char  |   4    |          "fmt "，注意最后一个字符为空格，小写           |
+  |    cksize     | uint32 |   4    |            当前块的长度，不包括ckid和cksize             |
+  |   FormatTag   | int16  |   2    |               音频数据的编码方式，1为PCM                |
+  |   Channels    | int16  |   2    |              声道数，单声道为1，双声道为2               |
+  | SamplesPerSec | int32  |   4    |         采样率，本文中用到的音频数据一律为44100         |
+  |  BytesPerSec  | int32  |   4    |               比特率，采样率*每次采样大小               |
+  |  BlockAlign   | int16  |   2    | 每次采样大小，采样精度 * 声道数 / 8，16bit采样率该值为4 |
+  | BitsPerSample | int16  |   2    |             每个声道的采样精度，16bit就是16             |
+
+- WAVE_DATA
+
+  |  字段  |  类型  | 字节数 |      描述      |
+  | :----: | :----: | :----: | :------------: |
+  |  ckid  |  char  |   4    |  "data"，小写  |
+  | cksize | uint32 |   4    | 音频数据的长度 |
+
+尝试用Windows10自带的Grove音乐打开，能够正常播放
+
+<center>
+	<img src="./pic/PCM/output_wav.png" width="600">
+	<center>使用Grove播放生成的wav文件</center>
+</center>
